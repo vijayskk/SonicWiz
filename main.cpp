@@ -15,9 +15,19 @@ static void checkError(PaError err)
     }
 }
 
+static inline float max(float a, float b)
+{
+    return a > b ? a : b;
+}
+
+static inline float absf(float a)
+{
+    return a > 0 ? a : -a;
+}
+
 static int paTestCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userdata)
 {
-    float * in = (float *)inputBuffer;
+    float *in = (float *)inputBuffer;
     (void)outputBuffer;
 
     int displaySize = 100;
@@ -26,7 +36,35 @@ static int paTestCallback(const void *inputBuffer, void *outputBuffer, unsigned 
     float vol_l = 0;
     float vol_r = 0;
 
+    for (unsigned long i = 0; i < framesPerBuffer; i += 2)
+    {
+        vol_l = max(vol_l, absf(in[i]));
+        vol_r = max(vol_r, absf(in[i + 1]));
+    }
+
+    for (int i = 0; i < displaySize; i++)
+    {
+        float bar = i / (float)displaySize;
+        if (bar <= vol_l && bar <= vol_r)
+        {
+            printf("█");
+        }
+        else if (bar <= vol_l)
+        {
+            printf("▀");
+        }
+        else if (bar <= vol_r)
+        {
+            printf("▄");
+        }
+        else
+        {
+            printf(" ");
+        }
+    }
+
     fflush(stdout);
+    return 0;
 }
 
 int main(int argc, char const *argv[])
@@ -64,7 +102,6 @@ int main(int argc, char const *argv[])
             printf("Selected: %d", selectedDevice);
         }
     }
-    
 
     PaStreamParameters inputParameters;
     PaStreamParameters outputParameters;
@@ -92,18 +129,19 @@ int main(int argc, char const *argv[])
         FRAMES_PER_BUFFER,
         paNoFlag,
         paTestCallback,
-        NULL
-    );
+        NULL);
     checkError(error);
 
     error = Pa_StartStream(stream);
     checkError(error);
 
-    Pa_Sleep(10*1000);
+    while (true)
+    {
+        /* code */
+    }
 
     error = Pa_StopStream(stream);
     checkError(error);
-
 
     error = Pa_CloseStream(stream);
     checkError(error);
